@@ -1023,6 +1023,8 @@ QString WebPage::renderBase64(const QByteArray &format)
     return "";
 }
 
+#define PHANTOMJS_PDF_DPI 72            // Different defaults. OSX: 72, X11: 75(?), Windows: 96
+
 QImage WebPage::renderImage()
 {
     QSize contentsSize = m_mainFrame->contentsSize();
@@ -1041,6 +1043,11 @@ QImage WebPage::renderImage()
 #endif
 
     QImage buffer(frameRect.size(), format);
+	// Fix PNG wrong aspect ratio on Linux
+    int dpm = PHANTOMJS_PDF_DPI / 0.0254;
+    buffer.setDotsPerMeterX(dpm);
+    buffer.setDotsPerMeterY(dpm);
+
     buffer.fill(Qt::transparent);
 
     QPainter painter;
@@ -1078,8 +1085,6 @@ QImage WebPage::renderImage()
     m_customWebPage->setViewportSize(viewportSize);
     return buffer;
 }
-
-#define PHANTOMJS_PDF_DPI 72            // Different defaults. OSX: 72, X11: 75(?), Windows: 96
 
 qreal stringToPointSize(const QString &string)
 {
