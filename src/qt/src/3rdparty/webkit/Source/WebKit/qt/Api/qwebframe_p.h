@@ -129,6 +129,10 @@ public:
 #if ENABLE(ORIENTATION_EVENTS) && ENABLE(DEVICE_ORIENTATION)
     QtMobility::QOrientationSensor m_orientation;
 #endif
+	// PDF LINKS
+
+	int printWidth;
+	QHash<const WebCore::Node*, const WebCore::RenderObject*> elementToRenderObject;
 };
 
 class QWebHitTestResultPrivate {

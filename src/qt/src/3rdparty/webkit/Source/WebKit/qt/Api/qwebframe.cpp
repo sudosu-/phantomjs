@@ -1500,6 +1500,10 @@ void QWebFrame::print(QPrinter *printer, PrintCallback *callback) const
     painter.scale(zoomFactorX, zoomFactorY);
     GraphicsContext ctx(&painter);
 
+	d->printWidth = pageRect.width();
+
+	PdfLinks pdfLinks(this, printContext);
+
     for (int i = 0; i < docCopies; ++i) {
         int page = fromPage;
         while (true) {
@@ -1517,6 +1521,9 @@ void QWebFrame::print(QPrinter *printer, PrintCallback *callback) const
                     headerFooter.paintFooter(ctx, pageRect, logicalPage, logicalPages);
                 }
                 printContext.spoolPage(ctx, page - 1, pageRect.width());
+
+				pdfLinks.paintLinks(page, painter, printContext);
+
                 if (j < pageCopies - 1)
                     printer->newPage();
             }
@@ -1538,6 +1545,62 @@ void QWebFrame::print(QPrinter *printer, PrintCallback *callback) const
 
     printContext.end();
 }
+
+QWebElement QWebFrame::findAnchor(const QString& name) const
+{
+    QWebElement e;
+    e = this->findFirstElement("a[name=\"" + name + "\"]");
+    if (e.isNull()) {
+        e = this->findFirstElement("*[name=\"" + name + "\"]");
+    }
+    if (e.isNull()) {
+        e = this->findFirstElement("*[id=\"" + name + "\"]");
+    }
+
+    return e;
+}
+
+QPair<int, QRectF> QWebFrame::elementLocation(const QWebElement &element, const PrintContext& printCtx) const
+{
+	if (d->elementToRenderObject.empty()) {
+		for (WebCore::RenderObject* obj = d->frame->document()->renderer(); obj; obj = obj->nextInPreOrder()) {
+			if (obj->node()) {
+				d->elementToRenderObject[obj->node()] = obj;
+			}
+		}
+	}
+
+    if (!d->elementToRenderObject.contains(element.m_element)) {
+        return QPair<int,QRectF>(-1, QRectF());
+    }
+
+    const WebCore::RenderObject* ro = d->elementToRenderObject[element.m_element];
+	const Vector<IntRect>& pageRects = printCtx.pageRects();
+
+    WebCore::RenderView* root = toRenderView(d->frame->document()->renderer());
+
+    float scale = (float)d->printWidth / (float)root->width();
+
+    QRectF r(const_cast<WebCore::RenderObject *>(ro)->absoluteBoundingBoxRect(true));
+	
+	int low=0;
+	int high=pageRects.size();
+	int c = r.y() + r.height() / 2;
+	while(low <= high) {
+		int m = (low+high)/2;
+		if(c < pageRects[m].y())
+			high = m-1;
+		else if(c > (pageRects[m].y() + pageRects[m].height()))
+			low = m +1;
+		else {
+			QRectF tr = r.translated(0, -pageRects[m].y());
+			return QPair<int, QRectF>(m+1, QRect(tr.x() * scale, tr.y()*scale, tr.width()*scale, tr.height()*scale));
+		}
+	}
+
+    return QPair<int,QRectF>(-1, QRectF());
+}
+
 #endif // QT_NO_PRINTER
 
 /*!

@@ -57,6 +57,7 @@ namespace WebCore {
     class FrameLoaderClientQt;
     class ChromeClientQt;
     class PlatformLayerProxyQt;
+	class PrintContext;
 }
 class QWebFrameData;
 class QWebHitTestResultPrivate;
@@ -217,6 +218,9 @@ public Q_SLOTS:
 #ifndef QT_NO_PRINTER
     void print(QPrinter *printer) const;
     void print(QPrinter *printer, PrintCallback *callback) const;
+	// PDF LINKS
+	QPair<int, QRectF> elementLocation(const QWebElement &element, const WebCore::PrintContext& printCtx) const;
+	QWebElement findAnchor(const QString& name) const;
 #endif
 
 Q_SIGNALS:
